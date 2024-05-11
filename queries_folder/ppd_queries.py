@@ -1,16 +1,54 @@
 import json
+from datetime import datetime
 
 ### POST QUERIES ###
 def post_comment(db, user_email, room_id, text, category):
-    comment = {
-        'user_email': user_email,
-        'room_id': room_id,
-        'text': text,
-        'category': category
+    # tenemos que verificar que el user_email exista
+    user = db.users.find_one({"email": user_email})
+    if not user:
+        return {"status": "error", "message": "User does not exist"}
+    
+    # tennemos que verificar que la room_id exista
+    room = db.rooms.find_one({"room_id": room_id})
+    if not room:
+        return {"status": "error", "message": "Room does not exist"}
+    
+    new_hint = {
+        "text": text,
+        "category": category,
+        "creation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
+        "referemces_room": {
+            "room_id": room_id,
+            "room_name": room["room_name"],
+            "dungeon_id": room["dungeon_id"],
+            "dungeon_name": room["dungeon_name"]
+        }
     }
-    db.comments.insert_one(comment)
-    return json.dumps({'status': 'success', 'message': 'Comment added'})
+    
+    db.users.update_one(
+        {"email": user_email},
+        {"$push": {"hints": new_hint}}
+    )
+    
+    # ahora tenemos que actualizar la colleciuon de rooms "hints"
+    
+    db.rooms.update_one(
+        {"room_id": room_id},
+        {"$push": {"hints": {
+            "category": category,
+            "hintText": text,
+            "publish_by": {
+                "email": user_email,
+                "country": user["country"],
+                "user_name": user["name"],
+                "creation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            }
+        },
+            "creation_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")}}
+        )
 
+    return {"status": "success", "message": "Comment added"}
+    
 def post_monster(db, name, type, level, place, exp, man_page):
     monster = {
         'name': name,
@@ -36,15 +74,26 @@ def post_loot(db, name, type1, type2, weight, gold):
 
 def post_room(db, dungeon_id, dungeon_name, dungeon_lore, room_name, rooms_connected, inWP=None, outWP=None):
     room = {
+        'room_id': db.rooms.count_documents({}) + 1,
         'dungeon_id': dungeon_id,
         'dungeon_name': dungeon_name,
         'dungeon_lore': dungeon_lore,
         'room_name': room_name,
-        'rooms_connected': [{'room_id': rid} for rid in rooms_connected],
+        'rooms_connected': [{'room_id': rid,
+                            'room_name': db.rooms.find_one({'room_id': rid})['room_name']
+                            } for rid in rooms_connected],
         'inWP': inWP,
         'outWP': outWP
     }
     db.rooms.insert_one(room)
+    
+    # por cada room conectada, tenemos que agregar la referencia a la nueva room
+    for rid in rooms_connected:
+        db.rooms.update_one(
+            {'room_id': rid},
+            {'$push': {'rooms_connected': {'room_id': room['room_id'], 'room_name': room_name}}}
+        )
+    
     return json.dumps({'status': 'success', 'message': 'Room added'})
 
 ### PUT QUERIES ###
