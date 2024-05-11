@@ -154,7 +154,7 @@ def get_room_by_id(db, room_id):
                     }
                 }
             },
-            "comments": "$hints"  # Asume que los comentarios están almacenados en el campo 'hints'
+            "hints": "$hints"
         }}
     ]
 

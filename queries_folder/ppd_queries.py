@@ -98,46 +98,52 @@ def post_room(db, dungeon_id, dungeon_name, dungeon_lore, room_name, rooms_conne
 
 ### PUT QUERIES ###
 def put_room_monsters(db, room_id, monsters):
-    # Verify monsters exist
+    # verificamos si los monsters existen
     existing_monsters = db.monsters.find({'id': {'$in': monsters}}, {'_id': 0, 'id': 1})
     existing_monsters_ids = [m['id'] for m in existing_monsters]
+    
+    # si la cantida de monsters que existe es diferente a la cantidad de monsters que se quieren agregar, raise error
     if len(existing_monsters_ids) != len(monsters):
         return json.dumps({'status': 'error', 'message': 'One or more monsters do not exist'})
-
+    
     # Update the room with new monsters
     db.rooms.update_one(
         {'room_id': room_id},
-        {'$set': {'monsters': [{'id': mid} for mid in monsters]}}
+        {'$set': {'monsters': [db.mosters.find_one({'id': mid}, {'_id': 0, 'in_rooms': 0})
+                            for mid in monsters]}}
     )
-    return json.dumps({'status': 'success', 'message': 'Monsters updated in room'})
 
 def put_room_loot(db, room_id, loot):
-    # Verify loot items exist
+    # verificamos si los loot existen
     existing_loot = db.loot.find({'id': {'$in': loot}}, {'_id': 0, 'id': 1})
     existing_loot_ids = [lt['id'] for lt in existing_loot]
+    
     if len(existing_loot_ids) != len(loot):
         return json.dumps({'status': 'error', 'message': 'One or more loot items do not exist'})
 
-    # Update the room with new loot
+    # hacer update de la room con el nuevo loot
     db.rooms.update_one(
         {'room_id': room_id},
-        {'$set': {'loot': [{'id': lid} for lid in loot]}}
+        {'$set': {'loot': [db.loot.find_one({'id': lid}, {'_id': 0, 'in_rooms': 0})
+                            for lid in loot]}}
     )
-    return json.dumps({'status': 'success', 'message': 'Loot updated in room'})
 
 def put_room_connections(db, room_id, connections):
-    # Verify room connections exist
+    # Verificar que las rooms existan
     existing_rooms = db.rooms.find({'room_id': {'$in': connections}}, {'_id': 0, 'room_id': 1})
     existing_room_ids = [r['room_id'] for r in existing_rooms]
+    
     if len(existing_room_ids) != len(connections):
         return json.dumps({'status': 'error', 'message': 'One or more connected rooms do not exist'})
 
-    # Update the room with new connections
+    # hacer update de la room con las nuevas conexiones
     db.rooms.update_one(
         {'room_id': room_id},
-        {'$set': {'rooms_connected': [{'room_id': rid} for rid in connections]}}
-    )
-    return json.dumps({'status': 'success', 'message': 'Room connections updated'})
+        {'$set': {'rooms_connected': [db.rooms.find_one({'room_id': rid}, {'_id': 0, 'room_id': 1, 'room_name': 1})
+                                    for rid in connections]
+                }
+            }
+        )
 
 ### DELETE QUERIES ###
 def delete_room(db, room_id):
