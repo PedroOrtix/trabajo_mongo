@@ -109,7 +109,7 @@ def put_room_monsters(db, room_id, monsters):
     # Update the room with new monsters
     db.rooms.update_one(
         {'room_id': room_id},
-        {'$set': {'monsters': [db.mosters.find_one({'id': mid}, {'_id': 0, 'in_rooms': 0})
+        {'$set': {'monsters': [db.monsters.find_one({'id': mid}, {'_id': 0, 'in_rooms': 0})
                             for mid in monsters]}}
     )
 
