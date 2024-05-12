@@ -1,13 +1,12 @@
 import json
 
 def get_loot(db):
-    # Retrieve basic details of all loot items
+    # Cogemos todos los objetos de la colección loot
     loot_items = list(db.loot.find({}, {'_id': 0, 'id': 1, 'name': 1}))
     return loot_items
 
 def get_loot_by_id(db, loot_id):
-    # Retrieve detailed information about a specific loot item
-    # from in_rooms atribute take the room_id and dungeon_id
+    # Coger el objeto loot por su id
     loot = db.loot.find_one({'id': loot_id}, {'_id': 0})
     
     # vamos a omitir el atributo amount dentro de in_rooms
@@ -25,7 +24,7 @@ def get_monster(db):
     return monsters
 
 def get_monster_by_id(db, monster_id):
-    # Retrieve detailed information about a specific monster
+    # Cogemos el monstruo por su id
     monster = db.monsters.find_one({'id': monster_id}, {'_id': 0})
     # vamos a omitir el atributo amount dentro de in_rooms
     if monster.get('in_rooms') is not None:
@@ -36,7 +35,7 @@ def get_monster_by_id(db, monster_id):
     return monster
 
 def get_dungeons(db):
-    # Aggregate and list unique dungeons from the rooms collection
+    # Aggregate pipeline para agrupar por dungeon_id y dungeon_name
     pipeline = [
         {
             "$group": {
@@ -78,7 +77,7 @@ def get_dungeon_by_id(db, dungeon_id):
                     "$map": {  # Transforma cada monstruo en el array monsters para obtener solo id y nombre
                         "input": "$monsters",
                         "as": "monster",
-                        "in": { # ponemos el doble $$ porque hacermos referencia a una variable de la variable
+                        "in": { # ponemos el doble $$ porque hacemos referencia a una variable de la variable
                             "id": "$$monster.id",
                             "name": "$$monster.name"
                         }
@@ -207,11 +206,11 @@ def get_room_by_id(db, room_id):
     return result
 
 def get_user(db):
-    # Retrieve basic details of all users
+    # Coger todos los usuarios, pero solo mostrar email, user_name y country
     users = list(db.users.find({}, {'_id': 0, 'email': 1, 'user_name': 1, 'country': 1}))
     return users
 
 def get_user_by_email(db, email):
-    # Retrieve detailed information about a user by email
+    # Coger un usuario por su email
     user = db.users.find_one({'email': email}, {'_id': 0})
     return user
