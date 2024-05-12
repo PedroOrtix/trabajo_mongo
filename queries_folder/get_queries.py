@@ -74,8 +74,26 @@ def get_dungeon_by_id(db, dungeon_id):
                 "room_id": "$room_id",
                 "room_name": "$room_name",
                 "connected_rooms": "$rooms_connected",
-                "monsters": "$monsters",  # Tenemos que sacar aun el id y nombre de los monstruos
-                "loots": "$loot",  # Tenemos que sacar aun el id y nombre de los loots
+                "monsters": {
+                    "$map": {  # Transforma cada monstruo en el array monsters para obtener solo id y nombre
+                        "input": "$monsters",
+                        "as": "monster",
+                        "in": { # ponemos el doble $$ porque hacermos referencia a una variable de la variable
+                            "id": "$$monster.id",
+                            "name": "$$monster.name"
+                        }
+                    }
+                },  # Tenemos que sacar aun el id y nombre de los monstruos
+                "loots": {
+                    "$map": {  # Transforma cada loot en el array loots para obtener solo id y nombre
+                        "input": "$loot",
+                        "as": "loot",
+                        "in": {
+                            "id": "$$loot.id",
+                            "name": "$$loot.name"
+                        }
+                    }
+                },  # Tenemos que sacar aun el id y nombre de los loots
                     "bug": {"$sum": {"$cond": [{"$eq": ["$hints.category", "bug"]}, 1, 0]}},
                     "hint": {"$sum": {"$cond": [{"$eq": ["$hints.category", "hint"]}, 1, 0]}},
                     "lore": {"$sum": {"$cond": [{"$eq": ["$hints.category", "lore"]}, 1, 0]}},
@@ -96,6 +114,30 @@ def get_dungeon_by_id(db, dungeon_id):
         
         
     result = list(db.rooms.aggregate(pipeline))
+    
+    # en ves que sobrecragar mas el pipeline vamos a hacer una función que quite los duplicados en python
+    def remove_duplicates(rooms):
+        for room in rooms:
+            # Verificar si 'monsters' y 'loots' están presentes y son listas
+            if 'monsters' in room and isinstance(room['monsters'], list):
+                unique_monsters = {}
+                for monster in room['monsters']:
+                    if 'id' in monster:  # Asegurarse de que 'id' está presente
+                        unique_monsters[monster['id']] = monster
+                room['monsters'] = list(unique_monsters.values())
+
+            if 'loots' in room and isinstance(room['loots'], list):
+                unique_loots = {}
+                for loot in room['loots']:
+                    if 'id' in loot:  # Asegurarse de que 'id' está presente
+                        unique_loots[loot['id']] = loot
+                room['loots'] = list(unique_loots.values())
+
+        return rooms
+    
+    for dungeon in result:
+        dungeon['rooms'] = remove_duplicates(dungeon['rooms'])
+        
     return result
 
 def get_room_by_id(db, room_id):
