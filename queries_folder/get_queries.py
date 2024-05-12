@@ -42,7 +42,8 @@ def get_dungeons(db):
             "$group": {
                 "_id": "$dungeon_id", # este id hace referencia a la instaciua dungeon_id de la coleccion rooms
                 
-                # vamos a tomar el primer valor de dungeon_id y dungeon_name
+                # vamos a tomar el primer valor de dungeon_id y dungeon_name, suponemos que los ids son unicos
+                # y coger el primero es coger todas sus ocurrencias
                 "dungeon_id": {"$first": "$dungeon_id"},
                 "name": {"$first": "$dungeon_name"},
                 
@@ -62,13 +63,13 @@ def get_dungeons(db):
 
 def get_dungeon_by_id(db, dungeon_id):
     pipeline = [
-        # Filtrar documentos por dungeon_id
+        # Filtrar rooms por dungeon_id
         {"$match": {"dungeon_id": dungeon_id}},
         
         # Agrupar por dungeon_id para consolidar la información
         {"$group": {
             "_id": "$dungeon_id",
-            "name": {"$first": "$dungeon_name"},
+            "name": {"$first": "$dungeon_name"}, # la misma razón que en la función anterior
             "rooms": {"$push": {
                 "room_id": "$room_id",
                 "room_name": "$room_name",
@@ -77,7 +78,8 @@ def get_dungeon_by_id(db, dungeon_id):
                 "loots": "$loot",  # Tenemos que sacar aun el id y nombre de los loots
                     "bug": {"$sum": {"$cond": [{"$eq": ["$hints.category", "bug"]}, 1, 0]}},
                     "hint": {"$sum": {"$cond": [{"$eq": ["$hints.category", "hint"]}, 1, 0]}},
-                    "lore": {"$sum": {"$cond": [{"$eq": ["$hints.category", "lore"]}, 1, 0]}}
+                    "lore": {"$sum": {"$cond": [{"$eq": ["$hints.category", "lore"]}, 1, 0]}},
+                    "suggestion": {"$sum": {"$cond": [{"$eq": ["$hints.category", "suggestion"]}, 1, 0]}},
                 }
             }}
         },

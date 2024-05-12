@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 ### POST QUERIES ###
@@ -59,7 +58,7 @@ def post_monster(db, name, type, level, place, exp, man_page):
         'man_page': man_page
     }
     db.monsters.insert_one(monster)
-    return json.dumps({'status': 'success', 'message': 'Monster added'})
+    return {'status': 'success', 'message': 'Monster added'}
 
 def post_loot(db, name, type1, type2, weight, gold):
     loot = {
@@ -70,7 +69,7 @@ def post_loot(db, name, type1, type2, weight, gold):
         'gold': gold
     }
     db.loot.insert_one(loot)
-    return json.dumps({'status': 'success', 'message': 'Loot added'})
+    return {'status': 'success', 'message': 'Loot added'}
 
 def post_room(db, dungeon_id, dungeon_name, dungeon_lore, room_name, rooms_connected, inWP=None, outWP=None):
     room = {
@@ -94,7 +93,7 @@ def post_room(db, dungeon_id, dungeon_name, dungeon_lore, room_name, rooms_conne
             {'$push': {'rooms_connected': {'room_id': room['room_id'], 'room_name': room_name}}}
         )
     
-    return json.dumps({'status': 'success', 'message': 'Room added'})
+    return {'status': 'success', 'message': 'Room added'}
 
 ### PUT QUERIES ###
 def put_room_monsters(db, room_id, monsters):
@@ -104,7 +103,7 @@ def put_room_monsters(db, room_id, monsters):
     
     # si la cantida de monsters que existe es diferente a la cantidad de monsters que se quieren agregar, raise error
     if len(existing_monsters_ids) != len(monsters):
-        return json.dumps({'status': 'error', 'message': 'One or more monsters do not exist'})
+        return {'status': 'error', 'message': 'One or more monsters do not exist'}
     
     # Update the room with new monsters
     db.rooms.update_one(
@@ -119,7 +118,7 @@ def put_room_loot(db, room_id, loot):
     existing_loot_ids = [lt['id'] for lt in existing_loot]
     
     if len(existing_loot_ids) != len(loot):
-        return json.dumps({'status': 'error', 'message': 'One or more loot items do not exist'})
+        return {'status': 'error', 'message': 'One or more loot items do not exist'}
 
     # hacer update de la room con el nuevo loot
     db.rooms.update_one(
@@ -134,7 +133,7 @@ def put_room_connections(db, room_id, connections):
     existing_room_ids = [r['room_id'] for r in existing_rooms]
     
     if len(existing_room_ids) != len(connections):
-        return json.dumps({'status': 'error', 'message': 'One or more connected rooms do not exist'})
+        return {'status': 'error', 'message': 'One or more connected rooms do not exist'}
 
     # hacer update de la room con las nuevas conexiones
     db.rooms.update_one(
@@ -151,13 +150,13 @@ def delete_room(db, room_id):
     db.rooms.delete_one({'room_id': room_id})
     db.monsters.update_many(
         {'in_rooms.room_id': room_id}, 
-        {'$pull': {'in_rooms': {'room_id': room_id}}}
+        {'$pull': {'in_rooms': {'room_id': room_id}}} # es el equivalente a un pop
     )
     db.loot.update_many(
         {'in_rooms.room_id': room_id},
         {'$pull': {'in_rooms': {'room_id': room_id}}}
     )
-    return json.dumps({'status': 'success', 'message': 'Room and related comments deleted'})
+    return {'status': 'success', 'message': 'Room and related comments deleted'}
 
 def delete_monster(db, monster_id):
     db.monsters.delete_one({'id': monster_id})
@@ -165,7 +164,7 @@ def delete_monster(db, monster_id):
         {'monsters.id': monster_id},
         {'$pull': {'monsters': {'id': monster_id}}}
     )
-    return json.dumps({'status': 'success', 'message': 'Monster deleted'})
+    return {'status': 'success', 'message': 'Monster deleted'}
 
 def delete_loot(db, loot_id):
     db.loot.delete_one({'id': loot_id})
@@ -173,4 +172,4 @@ def delete_loot(db, loot_id):
         {'loot.id': loot_id},
         {'$pull': {'loot': {'id': loot_id}}}
     )
-    return json.dumps({'status': 'success', 'message': 'Loot deleted'})
+    return {'status': 'success', 'message': 'Loot deleted'}
