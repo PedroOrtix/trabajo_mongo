@@ -1,4 +1,5 @@
-# Memoria de la Parte 1: Implementación de Funciones en Python con PyMongo
+# MEMORIA TRABAJO MONOGODB
+# Parte 1: Implementación de Funciones en Python con PyMongo
 
 ## Introducción
 
@@ -17,6 +18,7 @@ Las colecciones principales en la base de datos MongoDB son:
 - **Users**: Contiene información sobre los usuarios y sus comentarios.
 
 ## Funciones Implementadas
+Se pueden encontrar en la carpeta `queries_folder`.
 
 ### Funciones GET
 
@@ -82,3 +84,228 @@ Las colecciones principales en la base de datos MongoDB son:
 
 3. **`delete_loot(db, loot_id)`**:
    - Elimina un objeto de loot específico y remueve las referencias a él de las habitaciones.
+
+
+<br>
+<br>
+<br>
+
+# Parte 2: COMPASS
+## ej-1
+### ej-1A. Haz una consulta que obtengan los datos necesarios para la colección y exporta el resultado a un fichero .json. Debajo puedes encontrar la estructura de la colección.
+```
+db.rooms.aggregate([
+    {
+        $unwind: "$hints" 
+    },
+    {
+        $project: {
+            _id: 0,
+            Creation_date: "$hints.creation_date",
+            HintText: "$hints.hintText",
+            Category: "$hints.category",
+            References_room: { 
+                IdR: "$room_id", 
+                Name: "$room_name",
+                IdD: "$dungeon_id", 
+                Dungeon: "$dungeon_name"
+            },
+            Publish_by: { 
+                Email: "$hints.publish_by.email",
+                User_name: "$hints.publish_by.user_name",
+                CreationDate: "$hints.publish_by.creation_date",
+                Country: "$hints.publish_by.country"
+            }
+        }
+    },
+    {
+        $out: "Hints" 
+    }
+])
+```
+Si bien no estamos primero creando un json y luego subiendo ese json a la coleccion nueva, estamos creando directamente la colección en el script, desde donde ya se puede descargar el json. Esto es debido a que la única manera que hemos encontrado de generar el json primero era guardando el script en un fichero a parte y ejecutarlo, pero como tenemos la base de datos dentro de un contenedor es mucho lio.
+
+<img src="https://lh7-us.googleusercontent.com/iMidEV1I_yk1osPrRLV461aJnvIPjcwXwW0jnk8PDwYrXGM3DSpwpS6S4og6AKKuefMPdOKj0ayQyQXXV09fLNzUBzhdYIl7CNMiX4UcjVRGTsvi0cC0tt7k_dfM7asUjttrXfgdwjn-6_CqRltWZb0" width="250"/>
+
+
+<img src="https://lh7-us.googleusercontent.com/_Cxaqmw7Ndub6cDp_rRuV-y82nKcW0zOmxnPLk-BWLKDpaRE7K2yhMCf9yfh8VPFFLOKWgBCaUpKYwj3t7DLfSLplQjg4n2QccNTWozuLGR1PiNhtZYQuCY_9pG8Y7S7l5VmLuDQqXhf7-T2NZ2XsXI" width="300"/>
+
+
+### ej-1B. A continuación, crea una nueva colección llamada Hints y usa el fichero .json para poblarla. Además, elimina el campo hints de las colecciones Rooms y User.
+```
+db.rooms.updateMany(
+    {},  // Filtro vacío para pillar todos los documentos
+    {
+        $unset: { "hints": "" }  // Operación para eliminar el campo
+    }
+)
+
+db.users.updateMany(
+    {},
+    {
+        $unset: { "hints": "" }
+    }
+)
+```
+
+### ej-1C. Por último, actualiza las funciones de los endpoints: POST /comment, GET /dungeon/{dungeon_id} , GET /room/{room_id} y GET /user/{email}. ¿Como se ven afectados estos endpoints?
+Ver el archivo ej-1c.ipynb
+<br>
+<br>
+<br>
+## ej-2
+### ej-2A. El número de cuentas de usuario que se crearon cada año agrupadas por país.
+```
+db.users.aggregate([
+    {
+        $group: {
+            _id: { 
+                year: { $substr: ["$creation_date", 0, 4] },
+                country: "$country"
+            },
+            count: { $sum: 1 }
+        }
+    },
+    {
+        $group: {
+            _id: "$_id.year",
+            countries: {
+                $push: {
+                    country: "$_id.country",
+                    count: "$count"
+                }
+            }
+        }
+    },
+    {
+        $project: {
+            _id: 0,
+            year: "$_id",
+            countries: "$countries"
+        }
+    }
+])
+```
+<img src="https://lh7-us.googleusercontent.com/UCtvWg4Iti_PnOGkxB4LRZJhzzOkD5jTqEZFnBHRFbE7eu_4HDMSIhylhOWW3Tff7gd6Zp7OYh92IksDxumWWhfqUP0W7HL5XzJt2sD-zW8C0CB1UMi_Fzc7MWKVtgspBgwoRWw9igbcHf4pZDmT9EM" alt="drawing" width="350"/>
+
+
+### ej-2B. Los 20 países cuyos usuarios han realizado el mayor número de posts de tipo Lore en los últimos 5 años. Los países deben aparecen ordenados de mayor a menor número de posts.
+```
+db.Hints.aggregate([
+    {
+        $addFields: {
+            year: { $substr: ["$Creation_date", 0, 4] }
+        }
+    },
+    {
+        $set: {
+            year: { $toInt: "$year" }
+        }
+    },
+    {
+        $match: {
+            Category: { $eq: "lore" },
+            year: { $gte: 2018 }
+        }
+    },
+    {
+        $group: {
+            _id: "$Publish_by.Country",
+            count: { $sum: 1 }
+        }
+    },
+    {
+        $sort: { count: -1 }
+    },
+    { 
+        $limit: 20 
+    },
+    {
+        $project: {
+            _id: 0,
+            country: "$_id",
+            lore_posts: "$count"
+        }
+    }
+])
+```
+<img src="https://lh7-us.googleusercontent.com/pTp6Vtt0GHb8go0y-N9UBeChXBan0Jnn9bPPRIE7CiMmNah8RiQdPb0YB7h8jQM0VdvgRlyTZaBSmmQg_EADRYbCVFAlvM6cQbCDYYBkRjAPa_fXHB3W2yuOl3228YELt1JdBq6M6MhfI7hHw1sZFJY" alt="drawing" width="180"/>
+
+### ej-2C. Los 5 usuarios que más bugs han reportado en 2022. Deben aparecer ordenados de mayor a menor.
+```
+db.Hints.aggregate([
+    {
+        $match: {
+            Category: { $eq: "bug" },
+            Creation_date: { $regex: "^2022" }
+        }
+    },
+    {
+        $group: {
+            _id: "$Publish_by.User_name",
+            count: { $sum: 1 }
+        }
+    },
+    {
+        $sort: { count: -1 }
+    },
+    {
+        $limit: 5
+    },
+    {
+        $project: {
+            _id: 0,
+            user_name: "$_id",
+            bugs_reported: "$count"
+        }
+    }
+])
+```
+<img src="https://lh7-us.googleusercontent.com/v9ikb-n46l4E_7KJKyrtBo3K70mNQEjBJ5FNEYV0MeULKCcYvLkqgCQqJoarpkdwqx0v3SfuQC-Ayk2MAbSfalPbODKx0YNIkXLeDCWRrk18FEfFQpT2QlKp8Ip9VUmF72i8MLFLKA8TTPjcXrA9NT0" alt="drawing" width="200"/>
+
+Como hemos visto que los resultados más altos son personas con 2 mensajes, hemos comprobado cuantas personas en total, por separado, hay que han hecho comentarios de bugs en 2022 y luego cuantas personas nos ha salido del aggregate: que han sido 226 y 223 respectivamente y, efectivamente, cuando hacemos el aggregate solo hay 3 personas con más de 1 comentario sobre bugs.
+
+### ej-2D. La mazmorra que más sugerencias ha recibido desglosada en países.
+En este caso la solución se basa en hacer el maximo de cada uno de los paises por separado. En un script se incluiría este y se cambiaria en "Publish_by.Country": {$eq: "es_ES"} la etiqueta de país por la del que corresponda.
+```
+db.Hints.aggregate([
+    {
+        $match: {
+            Category: { $eq: "suggestion" },
+            "Publish_by.Country": { $eq: "es_ES" }
+        }
+    },
+    {
+        $group: {
+            _id: "$References_room.Dungeon",
+            count: { $sum: 1 }
+        }
+    },
+    {
+        $group: {
+            _id: null,
+            max_sugs: { $max: "$count" },
+            max_sugs_dung: {
+                $push: {
+                    dungeon: "$_id",
+                    count: "$count"
+                }
+            }
+        }
+    },
+    { $unwind: "$max_sugs_dung" },
+    {
+        $project: {
+            _id: 0,
+            dungeon_name: "$max_sugs_dung.dungeon",
+            is_max: { $eq: ["$max_sugs_dung.count", "$max_sugs"] }
+        }
+    },
+    {
+        $match: {
+            is_max: { $eq: true }
+        }
+    }
+])
+```
+<img src="https://lh7-us.googleusercontent.com/t0xeHnwSK8zsiqzKyc3Ds9o75AnaORVidpdqZaUqWrbliCPIeI6DuKEcQU41O2ApvwkcJrO-wrY7yUjYsGL4QLP6rcovR3Dp_WcCpD0MLq4yhExeS5-nrS3W73GDD-oeeae6ff4-R_3WkjUua5CZIIc" alt="drawing" width="500"/>
