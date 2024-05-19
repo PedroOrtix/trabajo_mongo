@@ -244,6 +244,10 @@ def delete_room(db, room_id):
         {'in_rooms.room_id': room_id},
         {'$pull': {'in_rooms': {'room_id': room_id}}}
     )
+    db.users.update_many(
+        {'hints.referemces_room.room_id': room_id},
+        {'$pull': {'hints': {'referemces_room.room_id': room_id}}})
+    
     return {'status': 'success', 'message': 'Room and related comments deleted'}
 
 def delete_monster(db, monster_id):
