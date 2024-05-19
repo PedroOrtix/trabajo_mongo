@@ -149,7 +149,7 @@ db.users.updateMany(
 ```
 
 ### ej-1C. Por último, actualiza las funciones de los endpoints: POST /comment, GET /dungeon/{dungeon_id} , GET /room/{room_id} y GET /user/{email}. ¿Como se ven afectados estos endpoints?
-Ver el archivo ej-1c.py
+Ver el archivo ej-1c.ipynb
 <br>
 <br>
 <br>
